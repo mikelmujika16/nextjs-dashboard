@@ -1,26 +1,53 @@
-// import postgres from 'postgres';
+import { createClient } from '../lib/supabase/client';
 
-// const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+const supabase = createClient();
 
-// async function listInvoices() {
-// 	const data = await sql`
-//     SELECT invoices.amount, customers.name
-//     FROM invoices
-//     JOIN customers ON invoices.customer_id = customers.id
-//     WHERE invoices.amount = 666;
-//   `;
+async function listInvoicesManualJoin() {
 
-// 	return data;
-// }
+  console.log('Fetching revenue data...');
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Get invoices first
+  const { data: invoices, error: invoicesError } = await supabase
+    .from('invoices')
+    .select('id, amount, customer_id')
+    .eq('amount', 666);
+
+  if (invoicesError) {
+    console.error('Error fetching invoices:', invoicesError);
+    throw invoicesError;
+  }
+
+  // Get customer data for each invoice
+  const result = await Promise.all(
+    invoices.map(async (invoice) => {
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('name')
+        .eq('id', invoice.customer_id)
+        .single();
+
+      if (customerError) {
+        console.error('Error fetching customer:', customerError);
+        throw customerError;
+      }
+
+      return {
+        amount: invoice.amount,
+        customers: {
+          name: customer.name
+        }
+      };
+    })
+  );
+
+  return result;
+}
 
 export async function GET() {
-  return Response.json({
-    message:
-      'Uncomment this file and remove this line. You can delete this file when you are finished.',
-  });
-  // try {
-  // 	return Response.json(await listInvoices());
-  // } catch (error) {
-  // 	return Response.json({ error }, { status: 500 });
-  // }
+  try {
+    return Response.json(await listInvoicesManualJoin());
+  } catch (error) {
+    return Response.json({ error }, { status: 500 });
+  }
 }

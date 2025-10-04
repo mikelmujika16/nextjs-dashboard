@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from './supabase/client';
 import {
   CustomerField,
   CustomersTableType,
@@ -9,17 +9,10 @@ import {
 } from './definitions';
 import { formatCurrency } from './utils';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient();
 
 export async function fetchRevenue() {
   try {
-    // Artificially delay a response for demo purposes.
-    // Don't do this in production :)
-    // console.log('Fetching revenue data...');
-    // await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const { data, error } = await supabase
       .from('revenue')
@@ -98,6 +91,11 @@ export async function fetchCardData() {
 
     const numberOfInvoices = invoicesResult.count ?? 0;
     const numberOfCustomers = customersResult.count ?? 0;
+
+    
+    console.log('Paid Invoices:', invoiceStatusResult.data.filter(invoice => invoice.status === 'paid'));
+    console.log('Pending Invoices:', (invoiceStatusResult.data.filter(invoice => invoice.status === 'pending')).length);
+    
 
     // Calculate paid and pending totals
     const paidTotal = invoiceStatusResult.data
